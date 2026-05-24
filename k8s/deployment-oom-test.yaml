@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oom-leak-demo
+  namespace: default
+  labels:
+    app: oom-leak-demo
+    phase: phase-1
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: oom-leak-demo
+  template:
+    metadata:
+      labels:
+        app: oom-leak-demo
+    spec:
+      # Don't restart the pod automatically on failure
+      restartPolicy: Always
+      
+      containers:
+      - name: memory-leak
+        image: oom-leak-demo:latest
+        imagePullPolicy: IfNotPresent
+        
+        # Memory limit set LOW (256Mi) to trigger OOMKill predictably
+        # The app allocates ~10MB/s, so it will hit this limit in ~25-30s
+        resources:
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+        
+        # Liveness and readiness probes are intentionally absent
+        # This is a deliberate failure scenario, so probes would just restart more aggressively
+        
+        # Standard output/error to see logs
+        stdout: /dev/stdout
+        stderr: /dev/stderr
